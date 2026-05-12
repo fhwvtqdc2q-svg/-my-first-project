@@ -6,10 +6,11 @@ This script reads local product and inventory CSV files, asks for or accepts a
 manual exchange rate, and creates a Markdown price list inside output/.
 
 Business pricing rule:
-- price_usd is treated as carton price in USD.
+- Unit 1 is croze.
+- Unit 2 is carton.
+- price_usd is treated as carton price in USD for the USD price list.
 - secondary_unit_conversion_factor is the number of crozes in one carton.
-- croze price USD = carton price USD / secondary_unit_conversion_factor.
-- croze price SYP = croze price USD * exchange rate.
+- croze price SYP = (carton price USD / secondary_unit_conversion_factor) * exchange rate.
 
 It does not connect to the internet, fetch exchange rates automatically, send
 messages, publish to social media, or modify source data.
@@ -150,8 +151,9 @@ def build_price_rows(
     products: Dict[str, Product],
     inventory: List[InventoryItem],
     exchange_rate: float,
-) -> Tuple[str, List[str], List[str]]:
-    row_data: List[Tuple[str, str, str]] = []
+) -> Tuple[str, str, List[str], List[str]]:
+    usd_row_data: List[Tuple[str, str, str]] = []
+    syp_row_data: List[Tuple[str, str, str]] = []
     excluded_items: List[str] = []
     review_items: List[str] = []
 
@@ -182,17 +184,27 @@ def build_price_rows(
         conversion_factor = product.secondary_unit_conversion_factor
         croze_price_usd = carton_price_usd / conversion_factor
         croze_price_syp = croze_price_usd * exchange_rate
-        row = (
-            f"| {group} | {product.product_code} | {product.product_name} | "
-            f"{item.available_quantity:g} {product.unit} | {money(carton_price_usd)} | "
-            f"{money(conversion_factor)} | {money(croze_price_usd)} | {syp_money(croze_price_syp)} |"
-        )
-        row_data.append((group, product.product_name, row))
 
-    row_data.sort(key=lambda item: (item[0], item[1]))
-    rows = [item[2] for item in row_data]
-    price_rows = "\n".join(rows) if rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - | - | - |"
-    return price_rows, excluded_items, review_items
+        usd_row = (
+            f"| {group} | {product.product_code} | {product.product_name} | "
+            f"{item.available_quantity:g} {product.unit} | {money(carton_price_usd)} | {money(conversion_factor)} |"
+        )
+        syp_row = (
+            f"| {group} | {product.product_code} | {product.product_name} | "
+            f"{item.available_quantity:g} {product.unit} | {syp_money(croze_price_syp)} |"
+        )
+        usd_row_data.append((group, product.product_name, usd_row))
+        syp_row_data.append((group, product.product_name, syp_row))
+
+    usd_row_data.sort(key=lambda item: (item[0], item[1]))
+    syp_row_data.sort(key=lambda item: (item[0], item[1]))
+
+    usd_rows = [item[2] for item in usd_row_data]
+    syp_rows = [item[2] for item in syp_row_data]
+
+    usd_carton_rows = "\n".join(usd_rows) if usd_rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - |"
+    syp_croze_rows = "\n".join(syp_rows) if syp_rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - |"
+    return usd_carton_rows, syp_croze_rows, excluded_items, review_items
 
 
 def bullet_lines(items: List[str]) -> str:
@@ -218,7 +230,7 @@ def generate_price_list(
 ) -> Path:
     products = load_products(samples_dir)
     inventory = load_inventory(samples_dir)
-    price_rows, excluded_items, review_items = build_price_rows(products, inventory, exchange_rate)
+    usd_carton_rows, syp_croze_rows, excluded_items, review_items = build_price_rows(products, inventory, exchange_rate)
 
     template_path = templates_dir / "price-list.md"
     template = template_path.read_text(encoding="utf-8")
@@ -226,7 +238,8 @@ def generate_price_list(
     replacements = {
         "{{date}}": report_date.isoformat(),
         "{{exchange_rate}}": syp_money(exchange_rate),
-        "{{price_rows}}": price_rows,
+        "{{usd_carton_rows}}": usd_carton_rows,
+        "{{syp_croze_rows}}": syp_croze_rows,
     }
     for placeholder, value in replacements.items():
         content = content.replace(placeholder, value)
