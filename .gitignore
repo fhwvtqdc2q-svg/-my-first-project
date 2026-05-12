@@ -19,6 +19,17 @@ venv/
 dist/
 build/
 
+# Local generated outputs
+output/
+converted/
+
+# Real business input files - do not commit sensitive accounting data
+input/
+*.xlsx
+*.xls
+*.xlsm
+*.pdf
+
 # Editor settings
 .vscode/
 .idea/
