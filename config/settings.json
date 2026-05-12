@@ -1,0 +1,30 @@
+{
+  "business": {
+    "default_warehouse_name": "Main Warehouse",
+    "default_currency": "USD",
+    "local_currency": "SYP"
+  },
+  "accounting": {
+    "overdue_days": 4,
+    "cash_average_days": 7,
+    "cash_low_threshold_ratio": 0.75
+  },
+  "price_list": {
+    "show_quantities_to_customers": true,
+    "hide_inactive_products": true,
+    "hide_out_of_stock_products": true,
+    "require_price_for_published_items": true,
+    "syp_rounding": 1
+  },
+  "security": {
+    "local_only": true,
+    "allow_external_connections": false,
+    "allow_auto_send_messages": false,
+    "allow_auto_publish_social_media": false,
+    "allow_sms_authentication": false
+  },
+  "audit": {
+    "enabled": true,
+    "audit_log_file": "audit-log.csv"
+  }
+}
