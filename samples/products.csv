@@ -1,0 +1,6 @@
+product_code,product_name,category,unit,price_usd,is_active
+A001,Sample Product A,General,box,10.00,true
+A002,Sample Product B,General,piece,7.50,true
+A003,Sample Product C,Special,carton,12.00,true
+A004,Sample Product D,General,piece,5.00,false
+A005,Sample Product E,Special,box,,true
