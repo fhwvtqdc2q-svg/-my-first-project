@@ -1,0 +1,4 @@
+customer_id,customer_name,phone,priority_level,credit_limit
+C001,Customer One,,high,1000
+C002,Customer Two,,medium,750
+C003,Customer Three,,low,500
