@@ -9,6 +9,13 @@
     "cash_average_days": 7,
     "cash_low_threshold_ratio": 0.75
   },
+  "inventory_movement": {
+    "low_stock_quantity": 5,
+    "high_sales_30_days": 10,
+    "slow_moving_days": 30,
+    "dead_stock_days": 60,
+    "dead_stock_min_quantity": 10
+  },
   "price_list": {
     "show_quantities_to_customers": true,
     "hide_inactive_products": true,
