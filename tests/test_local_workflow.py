@@ -58,7 +58,7 @@ def test_generate_price_list(output_dir: Path) -> None:
     content = price_list_path.read_text(encoding="utf-8")
     assert "نشرة أسعار اليوم" in content
     assert "Sample Product A" in content
-    assert "Sample Product B" not in content, "Out-of-stock product should not appear in published price rows."
+    assert "| A002 |" not in content, "Out-of-stock product should not appear in published price rows."
 
 
 def test_generate_payment_reminders(output_dir: Path) -> None:
@@ -74,9 +74,9 @@ def test_generate_payment_reminders(output_dir: Path) -> None:
     assert "الرصيد المتأخر" in content
 
 
-def test_run_local_workflow(output_dir: Path) -> None:
+def test_run_local_workflow_with_config_default(output_dir: Path) -> None:
     result = run_command(
-        ["scripts/run_local_workflow.py", "--date", "2026-05-12", "--exchange-rate", "15000", "--overdue-days", "4"],
+        ["scripts/run_local_workflow.py", "--date", "2026-05-12", "--exchange-rate", "15000"],
         output_dir,
     )
     assert_success(result)
@@ -95,7 +95,7 @@ def main() -> None:
         test_generate_daily_report(temp_dir)
         test_generate_price_list(temp_dir)
         test_generate_payment_reminders(temp_dir)
-        test_run_local_workflow(temp_dir)
+        test_run_local_workflow_with_config_default(temp_dir)
         print("All local workflow tests passed.")
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
