@@ -118,7 +118,7 @@ def build_html(
 <meta charset="utf-8">
 <title>نشرة أسعار اليوم</title>
 <style>
-  @page {{ size: A4; margin: 12mm; }}
+  @page {{ size: A4 landscape; margin: 8mm; }}
   * {{ box-sizing: border-box; }}
   body {{
     margin: 0;
@@ -128,48 +128,62 @@ def build_html(
     direction: rtl;
   }}
   .page {{
-    width: 210mm;
-    min-height: 297mm;
+    width: 297mm;
+    min-height: 210mm;
     margin: 0 auto;
     background: #ffffff;
-    padding: 18mm 14mm;
+    padding: 10mm;
   }}
   .header {{
-    border: 2px solid #111827;
-    border-radius: 18px;
-    padding: 18px 22px;
-    margin-bottom: 18px;
+    border: 1.5px solid #111827;
+    border-radius: 14px;
+    padding: 10px 16px;
+    margin-bottom: 10px;
     background: linear-gradient(135deg, #ffffff, #f9fafb);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
   }}
   .brand {{
-    font-size: 30px;
-    font-weight: 800;
-    margin: 0 0 6px 0;
+    font-size: 24px;
+    font-weight: 900;
+    margin: 0;
     letter-spacing: -0.5px;
+    white-space: nowrap;
   }}
   .meta {{
     display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
-    font-size: 15px;
+    font-size: 13px;
     color: #374151;
+    justify-content: flex-end;
   }}
   .pill {{
     border: 1px solid #d1d5db;
     background: #fff;
     border-radius: 999px;
-    padding: 6px 12px;
+    padding: 5px 10px;
+    white-space: nowrap;
+  }}
+  .price-grid {{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: start;
   }}
   .section {{
-    margin-top: 18px;
+    margin-top: 0;
     page-break-inside: avoid;
+    min-width: 0;
   }}
   .section-title {{
-    font-size: 22px;
-    font-weight: 800;
-    margin: 0 0 10px 0;
-    padding: 10px 14px;
-    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 900;
+    margin: 0 0 6px 0;
+    padding: 7px 10px;
+    border-radius: 10px;
     background: #111827;
     color: #fff;
   }}
@@ -179,18 +193,20 @@ def build_html(
     border-spacing: 0;
     overflow: hidden;
     border: 1px solid #d1d5db;
-    border-radius: 14px;
-    font-size: 14px;
+    border-radius: 10px;
+    font-size: 11px;
+    line-height: 1.25;
   }}
   th {{
     background: #f3f4f6;
     color: #111827;
-    padding: 10px;
+    padding: 6px 7px;
     text-align: right;
     border-bottom: 1px solid #d1d5db;
+    font-weight: 900;
   }}
   td {{
-    padding: 9px 10px;
+    padding: 4px 7px;
     border-bottom: 1px solid #e5e7eb;
     vertical-align: top;
   }}
@@ -198,33 +214,40 @@ def build_html(
   .group td {{
     background: #e5e7eb;
     color: #111827;
-    font-weight: 800;
-    padding: 8px 10px;
+    font-weight: 900;
+    padding: 5px 7px;
   }}
-  .item {{ width: 62%; font-weight: 600; }}
-  .unit {{ width: 16%; white-space: nowrap; color: #374151; }}
-  .price {{ width: 22%; text-align: left; direction: ltr; font-weight: 800; white-space: nowrap; }}
+  .item {{ width: 64%; font-weight: 600; }}
+  .unit {{ width: 14%; white-space: nowrap; color: #374151; }}
+  .price {{ width: 22%; text-align: left; direction: ltr; font-weight: 900; white-space: nowrap; }}
   .review {{
-    margin-top: 18px;
+    margin-top: 10px;
     border: 1px dashed #9ca3af;
-    border-radius: 14px;
-    padding: 12px 16px;
+    border-radius: 10px;
+    padding: 8px 12px;
     background: #fffbeb;
-    font-size: 13px;
+    font-size: 11px;
   }}
-  .review h2 {{ margin: 0 0 8px 0; font-size: 17px; }}
-  .review ul {{ margin: 0; padding-right: 20px; }}
-  .ok {{ color: #166534; font-weight: 700; }}
+  .review h2 {{ margin: 0 0 5px 0; font-size: 13px; }}
+  .review ul {{ margin: 0; padding-right: 18px; columns: 2; }}
+  .ok {{ color: #166534; font-weight: 800; }}
   .footer {{
-    margin-top: 18px;
+    margin-top: 8px;
     color: #6b7280;
-    font-size: 12px;
+    font-size: 10px;
     text-align: center;
   }}
   .internal {{ display: none; }}
+  @media screen and (max-width: 900px) {{
+    .page {{ width: auto; min-height: auto; padding: 10px; }}
+    .header {{ display: block; }}
+    .brand {{ margin-bottom: 8px; white-space: normal; }}
+    .price-grid {{ grid-template-columns: 1fr; }}
+  }}
   @media print {{
     body {{ background: #fff; }}
     .page {{ width: auto; min-height: auto; padding: 0; }}
+    .price-grid {{ grid-template-columns: 1fr 1fr; }}
   }}
 </style>
 </head>
@@ -238,20 +261,22 @@ def build_html(
     </div>
   </div>
 
-  <div class="section">
-    <h2 class="section-title">نشرة الدولار</h2>
-    <table>
-      <thead><tr><th>الصنف</th><th>الوحدة</th><th>السعر بالدولار</th></tr></thead>
-      <tbody>{usd_rows}</tbody>
-    </table>
-  </div>
+  <div class="price-grid">
+    <div class="section">
+      <h2 class="section-title">نشرة الدولار</h2>
+      <table>
+        <thead><tr><th>الصنف</th><th>الوحدة</th><th>السعر بالدولار</th></tr></thead>
+        <tbody>{usd_rows}</tbody>
+      </table>
+    </div>
 
-  <div class="section">
-    <h2 class="section-title">نشرة السوري</h2>
-    <table>
-      <thead><tr><th>الصنف</th><th>الوحدة</th><th>السعر بالليرة السورية</th></tr></thead>
-      <tbody>{syp_rows}</tbody>
-    </table>
+    <div class="section">
+      <h2 class="section-title">نشرة السوري</h2>
+      <table>
+        <thead><tr><th>الصنف</th><th>الوحدة</th><th>السعر بالليرة السورية</th></tr></thead>
+        <tbody>{syp_rows}</tbody>
+      </table>
+    </div>
   </div>
 
   <div class="review">
