@@ -27,6 +27,7 @@ SCRIPTS_DIR = BASE_DIR / "scripts"
 DEFAULT_SAMPLES_DIR = BASE_DIR / "samples"
 DEFAULT_TEMPLATES_DIR = BASE_DIR / "templates"
 DEFAULT_OUTPUT_DIR = BASE_DIR / "output"
+DEFAULT_SETTINGS_PATH = BASE_DIR / "config" / "settings.json"
 
 # Allow importing sibling scripts when executed directly.
 sys.path.insert(0, str(SCRIPTS_DIR))
@@ -34,12 +35,13 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from generate_daily_report import build_report, parse_date as parse_report_date  # noqa: E402
 from generate_price_list import generate_price_list, validate_exchange_rate  # noqa: E402
 from generate_payment_reminders import generate_reminders  # noqa: E402
+from local_settings import load_settings, require_local_safe_settings  # noqa: E402
 
 
-def append_audit_log(output_dir: Path, event: Dict[str, str]) -> Path:
+def append_audit_log(output_dir: Path, audit_file_name: str, event: Dict[str, str]) -> Path:
     """Append one local audit event without storing secrets."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    audit_path = output_dir / "audit-log.csv"
+    audit_path = output_dir / audit_file_name
     fieldnames = [
         "timestamp",
         "event_type",
@@ -63,6 +65,7 @@ def run_workflow(
     samples_dir: Path,
     templates_dir: Path,
     output_dir: Path,
+    audit_file_name: str,
 ) -> Dict[str, Path]:
     validate_exchange_rate(exchange_rate)
 
@@ -77,6 +80,7 @@ def run_workflow(
     results["daily_report"] = daily_report_path
     append_audit_log(
         output_dir,
+        audit_file_name,
         {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "event_type": "daily_report_generated",
@@ -96,6 +100,7 @@ def run_workflow(
     results["price_list"] = price_list_path
     append_audit_log(
         output_dir,
+        audit_file_name,
         {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "event_type": "price_list_generated",
@@ -115,6 +120,7 @@ def run_workflow(
     results["payment_reminders"] = reminders_summary_path
     append_audit_log(
         output_dir,
+        audit_file_name,
         {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "event_type": "payment_reminders_generated",
@@ -126,6 +132,7 @@ def run_workflow(
 
     audit_path = append_audit_log(
         output_dir,
+        audit_file_name,
         {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "event_type": "local_workflow_completed",
@@ -142,20 +149,30 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run the complete local safe workflow.")
     parser.add_argument("--date", default=date.today().isoformat(), help="Workflow date in YYYY-MM-DD format.")
     parser.add_argument("--exchange-rate", required=True, type=float, help="Manual USD to SYP exchange rate.")
-    parser.add_argument("--overdue-days", default=4, type=int, help="Minimum overdue days before reminders are generated.")
+    parser.add_argument("--overdue-days", default=None, type=int, help="Minimum overdue days before reminders are generated. Defaults to config/settings.json.")
+    parser.add_argument("--settings", default=str(DEFAULT_SETTINGS_PATH), help="Path to local settings JSON file.")
     parser.add_argument("--samples-dir", default=str(DEFAULT_SAMPLES_DIR), help="Directory containing CSV sample files.")
     parser.add_argument("--templates-dir", default=str(DEFAULT_TEMPLATES_DIR), help="Directory containing Markdown templates.")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Directory for generated local outputs.")
     args = parser.parse_args()
 
+    settings = load_settings(args.settings)
+    require_local_safe_settings(settings)
+    accounting_settings = settings.get("accounting", {})
+    audit_settings = settings.get("audit", {})
+
+    overdue_days = args.overdue_days if args.overdue_days is not None else int(accounting_settings.get("overdue_days", 4))
+    audit_file_name = str(audit_settings.get("audit_log_file", "audit-log.csv"))
+
     report_date = parse_report_date(args.date)
     results = run_workflow(
         report_date=report_date,
         exchange_rate=args.exchange_rate,
-        overdue_days=args.overdue_days,
+        overdue_days=overdue_days,
         samples_dir=Path(args.samples_dir),
         templates_dir=Path(args.templates_dir),
         output_dir=Path(args.output_dir),
+        audit_file_name=audit_file_name,
     )
 
     print("Local workflow completed successfully.")
