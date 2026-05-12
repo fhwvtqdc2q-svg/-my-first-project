@@ -221,22 +221,34 @@ def find_quantity_header(headers: Iterable[str]) -> Optional[str]:
     return None
 
 
+def get_sheet_bounds(sheet: Any) -> tuple[int, int]:
+    """Return safe max_row/max_column values, handling empty/read-only worksheets."""
+    max_row = sheet.max_row or 0
+    max_column = sheet.max_column or 0
+    return int(max_row), int(max_column)
+
+
 def load_inventory_from_excel(file_path: Path, sheet_name: Optional[str], min_quantity: float) -> dict[str, str]:
-    workbook = load_workbook(filename=file_path, read_only=True, data_only=True)
+    # read_only=False is more reliable for some accounting exports whose dimensions are not set.
+    workbook = load_workbook(filename=file_path, read_only=False, data_only=True)
     sheet_names = [sheet_name] if sheet_name else workbook.sheetnames
     inventory: dict[str, str] = {}
 
     for current_sheet_name in sheet_names:
-        if current_sheet_name not in workbook.sheetnames:
+        if not current_sheet_name or current_sheet_name not in workbook.sheetnames:
             continue
         sheet = workbook[current_sheet_name]
-        max_scan_rows = min(sheet.max_row, 40)
+        max_row, max_column = get_sheet_bounds(sheet)
+        if max_row <= 0 or max_column <= 0:
+            continue
+
+        max_scan_rows = min(max_row, 80)
         header_row_index: Optional[int] = None
         name_col_index: Optional[int] = None
         qty_col_index: Optional[int] = None
 
         for row_idx in range(1, max_scan_rows + 1):
-            headers = [text(sheet.cell(row_idx, col_idx).value) for col_idx in range(1, sheet.max_column + 1)]
+            headers = [text(sheet.cell(row_idx, col_idx).value) for col_idx in range(1, max_column + 1)]
             name_header = find_name_header(headers)
             if not name_header:
                 continue
@@ -249,7 +261,7 @@ def load_inventory_from_excel(file_path: Path, sheet_name: Optional[str], min_qu
         if header_row_index is None or name_col_index is None:
             continue
 
-        for row_idx in range(header_row_index + 1, sheet.max_row + 1):
+        for row_idx in range(header_row_index + 1, max_row + 1):
             name = text(sheet.cell(row_idx, name_col_index).value)
             if not name:
                 continue
@@ -261,6 +273,11 @@ def load_inventory_from_excel(file_path: Path, sheet_name: Optional[str], min_qu
                 inventory[normalize_key(name)] = name
 
     workbook.close()
+    if not inventory:
+        raise ValueError(
+            "لم يتم العثور على أصناف مخزون صالحة داخل ملف الجرد. "
+            "تأكد أن الملف يحتوي على أعمدة: اسم المادة / الكمية."
+        )
     return inventory
 
 
