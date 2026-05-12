@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>تسجيل الدخول الآمن</title>
+  <style>
+    :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f6f8; }
+    .card { width: min(420px, calc(100% - 32px)); background: white; border-radius: 24px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.12); }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    p { margin: 0 0 18px; color: #59636e; line-height: 1.7; }
+    label { display: block; margin: 14px 0 6px; font-weight: 700; }
+    input { width: 100%; box-sizing: border-box; padding: 14px; border-radius: 14px; border: 1px solid #ccd4dc; font-size: 16px; }
+    .notice { background: #eef7ff; border: 1px solid #cde8ff; padding: 12px; border-radius: 14px; margin: 16px 0; font-size: 14px; }
+    .row { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0; }
+    .row input { width: auto; margin-top: 4px; }
+    button { width: 100%; border: 0; border-radius: 16px; padding: 15px; font-size: 17px; font-weight: 800; cursor: pointer; }
+    .primary { background: #111827; color: white; }
+    .secondary { margin-top: 10px; background: #e8edf3; color: #111827; }
+    .small { font-size: 13px; margin-top: 14px; }
+    a { color: #0b66c3; }
+    @media (prefers-color-scheme: dark) { body { background: #0b0f14; } .card { background: #151b23; } p { color: #aab6c3; } input { background: #0b0f14; color: white; border-color: #303947; } .notice { background: #071d33; border-color: #17466e; } .secondary { background: #263241; color: white; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>إنشاء حساب آمن</h1>
+    <p>التسجيل يعتمد على البريد الإلكتروني، Google Sign‑In، Face ID/Touch ID، والمصادقة الثنائية. لا يتم استخدام رقم الهاتف.</p>
+
+    <form id="registerForm">
+      <label for="name">الاسم</label>
+      <input id="name" name="name" autocomplete="name" required minlength="2" placeholder="اكتب اسمك" />
+
+      <label for="email">البريد الإلكتروني</label>
+      <input id="email" name="email" type="email" autocomplete="email" required placeholder="name@example.com" />
+
+      <label for="password">كلمة المرور</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" required minlength="12" placeholder="12 حرفًا على الأقل" />
+
+      <div class="notice">
+        الحماية العالية مفعّلة: لا توجد عمليات خلفية بدون موافقة صريحة ومصادقة ثنائية، ولا يتم جمع رقم الهاتف أو استخدام SMS.
+      </div>
+
+      <div class="row">
+        <input id="terms" type="checkbox" required />
+        <label for="terms">أوافق على سياسة الخصوصية وشروط الأمان.</label>
+      </div>
+
+      <button class="primary" type="submit">إنشاء الحساب</button>
+      <button class="secondary" type="button" onclick="signInWithGoogle()">المتابعة باستخدام Google</button>
+      <button class="secondary" type="button" onclick="enableBiometrics()">تفعيل Face ID / Touch ID</button>
+    </form>
+
+    <p class="small"><a href="privacy_policy.md">قراءة سياسة الخصوصية</a></p>
+  </main>
+
+  <script>
+    const form = document.getElementById('registerForm');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+
+      if (!data.email || !data.password || data.password.length < 12) {
+        alert('تأكد من إدخال بريد صحيح وكلمة مرور لا تقل عن 12 حرفًا.');
+        return;
+      }
+
+      // هنا تربط Firebase Authentication أو نظام التسجيل الخاص بك.
+      // لا ترسل رقم هاتف، ولا تستخدم SMS.
+      alert('الواجهة جاهزة. اربطها الآن بخدمة التسجيل الخاصة بك مثل Firebase Auth.');
+    });
+
+    function signInWithGoogle() {
+      // اربط هنا Google Sign-In / Firebase Auth Provider.
+      alert('زر Google جاهز للربط مع Firebase/Google Sign-In.');
+    }
+
+    function enableBiometrics() {
+      // في الويب استخدم WebAuthn/Passkeys. في iOS استخدم LocalAuthentication.
+      alert('فعّل Face ID أو Touch ID عبر WebAuthn/Passkeys أو عبر كود التطبيق الأصلي.');
+    }
+  </script>
+</body>
+</html>
