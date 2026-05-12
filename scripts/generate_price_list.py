@@ -7,11 +7,11 @@ manual exchange rate, and creates a Markdown price list inside output/.
 
 Business pricing rule:
 - Unit 1 is croze.
-- Unit 2 is carton.
-- price_usd is treated as carton price in USD when conversion factor > 1.
+- Unit 2 is carton/cartona.
+- price_usd is treated as cartona price in USD when conversion factor > 1.
 - secondary_unit_conversion_factor is used internally only and is not shown in the published price list.
 - If conversion factor is missing/1, the item is treated as a single piece.
-- SYP price = carton USD / conversion factor * exchange rate, or piece USD * exchange rate for piece items.
+- SYP price = cartona USD / conversion factor * exchange rate, or piece USD * exchange rate for piece items.
 
 It does not connect to the internet, fetch exchange rates automatically, send
 messages, publish to social media, or modify source data.
@@ -137,7 +137,7 @@ def get_units_and_factor(product: Product) -> Tuple[str, str, float]:
     factor = product.secondary_unit_conversion_factor
     if factor is None or factor <= 1:
         return "قطعة", "قطعة", 1.0
-    return "كرتون", "كروز", factor
+    return "كرتونة", "كروز", factor
 
 
 def validate_exchange_rate(exchange_rate: float) -> None:
@@ -188,14 +188,8 @@ def build_price_rows(
         usd_price = product.price_usd
         syp_price = (product.price_usd / conversion_factor) * exchange_rate
 
-        usd_row = (
-            f"| {group} | {product.product_code} | {product.product_name} | "
-            f"{item.available_quantity:g} {product.unit} | {usd_unit} | {money(usd_price)} |"
-        )
-        syp_row = (
-            f"| {group} | {product.product_code} | {product.product_name} | "
-            f"{item.available_quantity:g} {product.unit} | {syp_unit} | {syp_money(syp_price)} |"
-        )
+        usd_row = f"| {product.product_name} | {usd_unit} | {money(usd_price)} |"
+        syp_row = f"| {product.product_name} | {syp_unit} | {syp_money(syp_price)} |"
         usd_row_data.append((group, product.product_name, usd_row))
         syp_row_data.append((group, product.product_name, syp_row))
 
@@ -205,8 +199,8 @@ def build_price_rows(
     usd_rows = [item[2] for item in usd_row_data]
     syp_rows = [item[2] for item in syp_row_data]
 
-    usd_carton_rows = "\n".join(usd_rows) if usd_rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - |"
-    syp_croze_rows = "\n".join(syp_rows) if syp_rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - |"
+    usd_carton_rows = "\n".join(usd_rows) if usd_rows else "| لا توجد أصناف متوفرة قابلة للنشر | - | - |"
+    syp_croze_rows = "\n".join(syp_rows) if syp_rows else "| لا توجد أصناف متوفرة قابلة للنشر | - | - |"
     return usd_carton_rows, syp_croze_rows, excluded_items, review_items
 
 
