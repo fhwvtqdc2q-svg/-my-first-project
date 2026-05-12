@@ -5,6 +5,12 @@ Local daily price-list generator.
 This script reads local product and inventory CSV files, asks for or accepts a
 manual exchange rate, and creates a Markdown price list inside output/.
 
+Business pricing rule:
+- price_usd is treated as carton price in USD.
+- secondary_unit_conversion_factor is the number of crozes in one carton.
+- croze price USD = carton price USD / secondary_unit_conversion_factor.
+- croze price SYP = croze price USD * exchange rate.
+
 It does not connect to the internet, fetch exchange rates automatically, send
 messages, publish to social media, or modify source data.
 """
@@ -13,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -33,6 +40,7 @@ class Product:
     unit: str
     price_usd: Optional[float]
     is_active: bool
+    secondary_unit_conversion_factor: Optional[float]
 
 
 @dataclass
@@ -84,6 +92,7 @@ def load_products(samples_dir: Path) -> Dict[str, Product]:
             unit=row.get("unit", "").strip(),
             price_usd=parse_optional_float(row.get("price_usd", "")),
             is_active=parse_bool(row.get("is_active", "")),
+            secondary_unit_conversion_factor=parse_optional_float(row.get("secondary_unit_conversion_factor", "")),
         )
         if product.product_code:
             products[product.product_code] = product
@@ -112,6 +121,16 @@ def syp_money(value: float) -> str:
     return f"{round(value):,}"
 
 
+def infer_group(product: Product) -> str:
+    if product.category:
+        return product.category
+    match = re.match(r"^\s*(\d+)", product.product_name)
+    if match:
+        return match.group(1)
+    first_word = product.product_name.split()[0] if product.product_name.split() else "غير مصنف"
+    return first_word
+
+
 def validate_exchange_rate(exchange_rate: float) -> None:
     if exchange_rate <= 0:
         raise ValueError("Exchange rate must be greater than zero.")
@@ -132,7 +151,7 @@ def build_price_rows(
     inventory: List[InventoryItem],
     exchange_rate: float,
 ) -> Tuple[str, List[str], List[str]]:
-    rows: List[str] = []
+    row_data: List[Tuple[str, str, str]] = []
     excluded_items: List[str] = []
     review_items: List[str] = []
 
@@ -151,16 +170,28 @@ def build_price_rows(
             continue
 
         if product.price_usd is None:
-            review_items.append(f"{product.product_name}: متوفر لكن لا يوجد له سعر بالدولار.")
+            review_items.append(f"{product.product_name}: متوفر لكن لا يوجد له سعر كرتون بالدولار.")
             continue
 
-        price_syp = product.price_usd * exchange_rate
-        rows.append(
-            f"| {product.product_code} | {product.product_name} | {product.category} | "
-            f"{item.available_quantity:g} {product.unit} | {money(product.price_usd)} | {syp_money(price_syp)} |"
-        )
+        if product.secondary_unit_conversion_factor is None or product.secondary_unit_conversion_factor <= 0:
+            review_items.append(f"{product.product_name}: متوفر وله سعر لكن لا يوجد عامل تحويل صحيح من الكرتون إلى الكروز.")
+            continue
 
-    price_rows = "\n".join(rows) if rows else "| - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - | - |"
+        group = infer_group(product)
+        carton_price_usd = product.price_usd
+        conversion_factor = product.secondary_unit_conversion_factor
+        croze_price_usd = carton_price_usd / conversion_factor
+        croze_price_syp = croze_price_usd * exchange_rate
+        row = (
+            f"| {group} | {product.product_code} | {product.product_name} | "
+            f"{item.available_quantity:g} {product.unit} | {money(carton_price_usd)} | "
+            f"{money(conversion_factor)} | {money(croze_price_usd)} | {syp_money(croze_price_syp)} |"
+        )
+        row_data.append((group, product.product_name, row))
+
+    row_data.sort(key=lambda item: (item[0], item[1]))
+    rows = [item[2] for item in row_data]
+    price_rows = "\n".join(rows) if rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - | - | - |"
     return price_rows, excluded_items, review_items
 
 
