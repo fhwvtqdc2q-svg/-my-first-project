@@ -8,9 +8,10 @@ manual exchange rate, and creates a Markdown price list inside output/.
 Business pricing rule:
 - Unit 1 is croze.
 - Unit 2 is carton.
-- price_usd is treated as carton price in USD for the USD price list.
-- secondary_unit_conversion_factor is the number of crozes in one carton.
-- croze price SYP = (carton price USD / secondary_unit_conversion_factor) * exchange rate.
+- price_usd is treated as carton price in USD when conversion factor > 1.
+- secondary_unit_conversion_factor is used internally only and is not shown in the published price list.
+- If conversion factor is missing/1, the item is treated as a single piece.
+- SYP price = carton USD / conversion factor * exchange rate, or piece USD * exchange rate for piece items.
 
 It does not connect to the internet, fetch exchange rates automatically, send
 messages, publish to social media, or modify source data.
@@ -132,6 +133,13 @@ def infer_group(product: Product) -> str:
     return first_word
 
 
+def get_units_and_factor(product: Product) -> Tuple[str, str, float]:
+    factor = product.secondary_unit_conversion_factor
+    if factor is None or factor <= 1:
+        return "قطعة", "قطعة", 1.0
+    return "كرتون", "كروز", factor
+
+
 def validate_exchange_rate(exchange_rate: float) -> None:
     if exchange_rate <= 0:
         raise ValueError("Exchange rate must be greater than zero.")
@@ -172,26 +180,21 @@ def build_price_rows(
             continue
 
         if product.price_usd is None:
-            review_items.append(f"{product.product_name}: متوفر لكن لا يوجد له سعر كرتون بالدولار.")
-            continue
-
-        if product.secondary_unit_conversion_factor is None or product.secondary_unit_conversion_factor <= 0:
-            review_items.append(f"{product.product_name}: متوفر وله سعر لكن لا يوجد عامل تحويل صحيح من الكرتون إلى الكروز.")
+            review_items.append(f"{product.product_name}: متوفر لكن لا يوجد له سعر بالدولار.")
             continue
 
         group = infer_group(product)
-        carton_price_usd = product.price_usd
-        conversion_factor = product.secondary_unit_conversion_factor
-        croze_price_usd = carton_price_usd / conversion_factor
-        croze_price_syp = croze_price_usd * exchange_rate
+        usd_unit, syp_unit, conversion_factor = get_units_and_factor(product)
+        usd_price = product.price_usd
+        syp_price = (product.price_usd / conversion_factor) * exchange_rate
 
         usd_row = (
             f"| {group} | {product.product_code} | {product.product_name} | "
-            f"{item.available_quantity:g} {product.unit} | {money(carton_price_usd)} | {money(conversion_factor)} |"
+            f"{item.available_quantity:g} {product.unit} | {usd_unit} | {money(usd_price)} |"
         )
         syp_row = (
             f"| {group} | {product.product_code} | {product.product_name} | "
-            f"{item.available_quantity:g} {product.unit} | {syp_money(croze_price_syp)} |"
+            f"{item.available_quantity:g} {product.unit} | {syp_unit} | {syp_money(syp_price)} |"
         )
         usd_row_data.append((group, product.product_name, usd_row))
         syp_row_data.append((group, product.product_name, syp_row))
@@ -203,7 +206,7 @@ def build_price_rows(
     syp_rows = [item[2] for item in syp_row_data]
 
     usd_carton_rows = "\n".join(usd_rows) if usd_rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - |"
-    syp_croze_rows = "\n".join(syp_rows) if syp_rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - |"
+    syp_croze_rows = "\n".join(syp_rows) if syp_rows else "| - | - | لا توجد أصناف متوفرة قابلة للنشر | - | - | - |"
     return usd_carton_rows, syp_croze_rows, excluded_items, review_items
 
 
