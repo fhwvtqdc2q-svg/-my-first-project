@@ -1,0 +1,4 @@
+payment_id,customer_id,invoice_id,payment_date,amount,payment_method
+PAY001,C001,INV001,2026-05-05,100,cash
+PAY002,C002,INV002,2026-05-12,300,cash
+PAY003,C001,INV004,2026-05-12,180,cash
