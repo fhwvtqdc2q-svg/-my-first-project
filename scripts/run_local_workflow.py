@@ -6,6 +6,7 @@ This script generates:
 - Daily accounting report
 - Daily price list
 - Overdue customer payment reminder drafts
+- Inventory movement and clearance report
 - Local audit log entry
 
 It does not connect to the internet, send messages, publish content, print files,
@@ -32,6 +33,7 @@ DEFAULT_SETTINGS_PATH = BASE_DIR / "config" / "settings.json"
 # Allow importing sibling scripts when executed directly.
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+from analyze_inventory_movement import generate_report as generate_inventory_movement_report  # noqa: E402
 from generate_daily_report import build_report, parse_date as parse_report_date  # noqa: E402
 from generate_price_list import generate_price_list, validate_exchange_rate  # noqa: E402
 from generate_payment_reminders import generate_reminders  # noqa: E402
@@ -65,6 +67,7 @@ def run_workflow(
     samples_dir: Path,
     templates_dir: Path,
     output_dir: Path,
+    settings_path: Path,
     audit_file_name: str,
 ) -> Dict[str, Path]:
     validate_exchange_rate(exchange_rate)
@@ -130,6 +133,25 @@ def run_workflow(
         },
     )
 
+    inventory_movement_path = generate_inventory_movement_report(
+        samples_dir=samples_dir,
+        output_dir=output_dir,
+        settings_path=settings_path,
+        report_date=report_date,
+    )
+    results["inventory_movement"] = inventory_movement_path
+    append_audit_log(
+        output_dir,
+        audit_file_name,
+        {
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "event_type": "inventory_movement_report_generated",
+            "status": "success",
+            "details": str(inventory_movement_path.relative_to(BASE_DIR)),
+            "source": "run_local_workflow.py",
+        },
+    )
+
     audit_path = append_audit_log(
         output_dir,
         audit_file_name,
@@ -137,7 +159,7 @@ def run_workflow(
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "event_type": "local_workflow_completed",
             "status": "success",
-            "details": "Generated daily report, price list, and payment reminder drafts locally.",
+            "details": "Generated daily report, price list, payment reminder drafts, and inventory movement report locally.",
             "source": "run_local_workflow.py",
         },
     )
@@ -156,7 +178,8 @@ def main() -> None:
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Directory for generated local outputs.")
     args = parser.parse_args()
 
-    settings = load_settings(args.settings)
+    settings_path = Path(args.settings)
+    settings = load_settings(settings_path)
     require_local_safe_settings(settings)
     accounting_settings = settings.get("accounting", {})
     audit_settings = settings.get("audit", {})
@@ -172,6 +195,7 @@ def main() -> None:
         samples_dir=Path(args.samples_dir),
         templates_dir=Path(args.templates_dir),
         output_dir=Path(args.output_dir),
+        settings_path=settings_path,
         audit_file_name=audit_file_name,
     )
 
