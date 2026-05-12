@@ -1,2 +1,5 @@
-# This project currently uses only the Python standard library.
-# No external dependencies are required for the local CSV-based prototype.
+# Local prototype dependencies
+# CSV-based reporting uses only the Python standard library.
+# Excel inspection requires openpyxl for .xlsx/.xlsm files.
+
+openpyxl>=3.1.0
